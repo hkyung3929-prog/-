@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>ONE PEICE - KR 한국주식</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:#f5f5f3;color:#1a1a1a;min-height:100vh}
+.topbar{background:#fff;border-bottom:0.5px solid #e0e0e0;padding:16px 20px;display:flex;align-items:center;gap:10px;position:sticky;top:0;z-index:100}
+.topbar h1{font-size:18px;font-weight:600}
+.topbar .sub{font-size:12px;color:#888;margin-left:4px}
+.tabs{display:flex;background:#fff;border-bottom:0.5px solid #e0e0e0;padding:0 20px}
+.tab{padding:12px 16px;font-size:13px;font-weight:500;color:#888;cursor:pointer;border-bottom:2px solid transparent}
+.tab.active{color:#1a1a1a;border-bottom-color:#1a1a1a}
+.content{padding:20px;max-width:800px;margin:0 auto}
+.card{background:#fff;border-radius:12px;border:0.5px solid #e0e0e0;padding:20px;margin-bottom:16px}
+.card-title{font-size:12px;font-weight:500;color:#888;letter-spacing:.05em;text-transform:uppercase;margin-bottom:14px}
+label{font-size:12px;color:#666;display:block;margin-bottom:4px}
+input,select{width:100%;height:38px;border:0.5px solid #ddd;border-radius:8px;padding:0 12px;font-size:14px;color:#1a1a1a;background:#fafafa;outline:none;margin-bottom:10px}
+input:focus,select:focus{border-color:#aaa;background:#fff}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.btn-dark{height:42px;background:#1a1a1a;color:#fff;width:100%;border:none;border-radius:8px;font-size:14px;font-weight:500;cursor:pointer;margin-top:4px}
+.btn-dark:hover{background:#333}
+.btn-red{background:transparent;border:0.5px solid #e24b4a;color:#e24b4a;font-size:12px;padding:0 10px;height:28px;border-radius:6px;cursor:pointer}
+.btn-red:hover{background:#fff0f0}
+.summary-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px}
+.metric{background:#f5f5f3;border-radius:8px;padding:12px}
+.metric .ml{font-size:11px;color:#888;margin-bottom:4px}
+.metric .mv{font-size:18px;font-weight:600}
+.pos{color:#e24b4a}.neg{color:#2563eb}.neu{color:#1a1a1a}
+.chart-wrap{position:relative;width:100%;height:220px;margin-top:8px}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{font-size:11px;color:#888;font-weight:500;text-align:left;padding:8px 10px;border-bottom:0.5px solid #e0e0e0;white-space:nowrap}
+td{padding:10px;border-bottom:0.5px solid #f0f0f0;vertical-align:middle}
+tr:last-child td{border-bottom:none}
+.badge{display:inline-block;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:500}
+.badge-buy{background:#fff0f0;color:#e24b4a}
+.badge-sell{background:#eff6ff;color:#2563eb}
+.empty{text-align:center;color:#aaa;font-size:13px;padding:32px 0}
+.legend{display:flex;gap:16px;margin-bottom:10px;font-size:12px;color:#666}
+.legend span{display:flex;align-items:center;gap:5px}
+.ldot{width:10px;height:10px;border-radius:2px}
+.tab-panel{display:none}
+.tab-panel.active{display:block}
+.type-toggle{display:flex;gap:8px;margin-bottom:12px}
+.type-btn{flex:1;height:36px;border-radius:8px;border:0.5px solid #ddd;background:#fafafa;font-size:13px;font-weight:500;cursor:pointer;color:#888}
+.type-btn.active-buy{background:#fff0f0;border-color:#e24b4a;color:#e24b4a}
+.type-btn.active-sell{background:#eff6ff;border-color:#2563eb;color:#2563eb}
+.stock-row{display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:0.5px solid #f0f0f0}
+.stock-row:last-child{border-bottom:none}
+.sname{font-size:14px;font-weight:500}
+.scode{font-size:11px;color:#aaa;margin-top:2px}
+.rate{font-size:15px;font-weight:600}
+.detail{font-size:11px;color:#aaa;margin-top:2px;text-align:right}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <span style="font-size:20px">🍀</span>
+  <h1>ONE PEICE</h1>
+  <span class="sub">🇰🇷 KR 한국주식</span>
+</div>
+
+<div class="tabs">
+  <div class="tab active" data-tab="dashboard" onclick="switchTab(this,'dashboard')">대시보드</div>
+  <div class="tab" data-tab="record" onclick="switchTab(this,'record')">매매 기록</div>
+  <div class="tab" data-tab="add" onclick="switchTab(this,'add')">+ 추가</div>
+</div>
+
+<div class="content">
+
+  <div id="tab-dashboard" class="tab-panel active">
+    <div class="card">
+      <div class="card-title">포트폴리오 요약</div>
+      <div class="summary-grid">
+        <div class="metric"><div class="ml">총 매수금액</div><div class="mv neu" id="totalBuy">-</div></div>
+        <div class="metric"><div class="ml">총 평가금액</div><div class="mv neu" id="totalEval">-</div></div>
+        <div class="metric"><div class="ml">총 수익금</div><div class="mv neu" id="totalProfit">-</div></div>
+        <div class="metric"><div class="ml">평균 수익률</div><div class="mv neu" id="totalRate">-</div></div>
+      </div>
+      <div class="legend">
+        <span><span class="ldot" style="background:#e24b4a"></span>수익</span>
+        <span><span class="ldot" style="background:#2563eb"></span>손실</span>
+      </div>
+      <div class="chart-wrap">
+        <canvas id="profitChart" role="img" aria-label="종목별 수익률 차트">종목별 수익률 차트</canvas>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">보유 종목</div>
+      <div id="holdingList"><div class="empty">보유 종목이 없어요</div></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">실현 손익 (매도 완료)</div>
+      <div class="chart-wrap" style="height:180px">
+        <canvas id="realizedChart" role="img" aria-label="실현손익 차트">실현손익 차트</canvas>
+      </div>
+      <div id="realizedList" style="margin-top:12px"><div class="empty">매도 기록이 없어요</div></div>
+    </div>
+  </div>
+
+  <div id="tab-record" class="tab-panel">
+    <div class="card">
+      <div class="card-title">전체 매매 기록</div>
+      <div style="overflow-x:auto">
+        <table>
+          <thead>
+            <tr><th>구분</th><th>종목</th><th>날짜</th><th>단가</th><th>수량</th><th>금액</th><th>수익금</th><th></th></tr>
+          </thead>
+          <tbody id="recordTable"><tr><td colspan="8" class="empty">기록이 없어요</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div id="tab-add" class="tab-panel">
+    <div class="card">
+      <div class="card-title">매매 기록 추가</div>
+      <div class="type-toggle">
+        <button class="type-btn active-buy" id="btn-buy" onclick="setType('buy')">매수</button>
+        <button class="type-btn" id="btn-sell" onclick="setType('sell')">매도</button>
+      </div>
+      <label>종목코드 (6자리)</label>
+      <input type="text" id="code" placeholder="예: 005930" maxlength="6"/>
+      <label>종목명</label>
+      <input type="text" id="sname" placeholder="예: 삼성전자"/>
+      <div class="grid2">
+        <div>
+          <label id="priceLabel">매수가 (원)</label>
+          <input type="number" id="price" placeholder="72000"/>
+        </div>
+        <div>
+          <label>수량 (주)</label>
+          <input type="number" id="qty" placeholder="10"/>
+        </div>
+      </div>
+      <label>날짜</label>
+      <input type="date" id="tradeDate"/>
+      <div id="sellInfo" style="display:none">
+        <label>매수 평균가 (원) — 수익 계산용</label>
+        <input type="number" id="avgBuyPrice" placeholder="매수했던 평균가"/>
+      </div>
+      <button class="btn-dark" onclick="addRecord()">기록 추가</button>
+    </div>
+  </div>
+
+</div>
+
+<script>
+let records = JSON.parse(localStorage.getItem('onepeice_kr') || '[]');
+let currentType = 'buy';
+let charts = {};
+
+function save(){ localStorage.setItem('onepeice_kr', JSON.stringify(records)); }
+function fmt(n){ return Math.round(n).toLocaleString('ko-KR'); }
+
+function switchTab(el, name){
+  document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.getElementById('tab-'+name).classList.add('active');
+  el.classList.add('active');
+  if(name==='dashboard') renderAll();
+}
+
+function setType(t){
+  currentType = t;
+  document.getElementById('btn-buy').className = 'type-btn'+(t==='buy'?' active-buy':'');
+  document.getElementById('btn-sell').className = 'type-btn'+(t==='sell'?' active-sell':'');
+  document.getElementById('priceLabel').textContent = t==='buy'?'매수가 (원)':'매도가 (원)';
+  document.getElementById('price').placeholder = t==='buy'?'72000':'75000';
+  document.getElementById('sellInfo').style.display = t==='sell'?'block':'none';
+}
+
+async function fetchPrice(code){
+  try{
+    const r = await fetch(`https://query1.finance.yahoo.com/v8/finance/chart/${code}.KS?interval=1d&range=1d`);
+    const d = await r.json();
+    const p = d?.chart?.result?.[0]?.meta?.regularMarketPrice;
+    return p ? Math.round(p) : null;
+  }catch{ return null; }
+}
+
+async function addRecord(){
+  const code = document.getElementById('code').value.trim();
+  const name = document.getElementById('sname').value.trim();
+  const price = parseFloat(document.getElementById('price').value);
+  const qty = parseInt(document.getElementById('qty').value);
+  const date = document.getElementById('tradeDate').value;
+  const avgBuy = currentType==='sell' ? parseFloat(document.getElementById('avgBuyPrice').value||0) : 0;
+
+  if(!code||!name||!price||!qty||!date){ alert('모든 항목을 입력해주세요!'); return; }
+  if(code.length!==6){ alert('종목코드는 6자리여야 해요'); return; }
+
+  records.push({
+    id: Date.now(), code, name, type: currentType,
+    price, qty, date, avgBuyPrice: avgBuy,
+    amount: price*qty,
+    profit: currentType==='sell' ? (price-avgBuy)*qty : null
+  });
+  save();
+  renderAll();
+  ['code','sname','price','qty','avgBuyPrice'].forEach(id=>{ const e=document.getElementById(id); if(e) e.value=''; });
+  document.getElementById('tradeDate').value = new Date().toISOString().split('T')[0];
+  alert('기록이 추가됐어요!');
+}
+
+function deleteRecord(id){
+  if(!confirm('이 기록을 삭제할까요?')) return;
+  records = records.filter(r=>r.id!==id);
+  save(); renderAll();
+}
+
+function getHoldings(){
+  const map = {};
+  records.filter(r=>r.type==='buy').forEach(r=>{
+    if(!map[r.code]) map[r.code]={code:r.code,name:r.name,totalQty:0,totalAmt:0};
+    map[r.code].totalQty += r.qty;
+    map[r.code].totalAmt += r.amount;
+  });
+  records.filter(r=>r.type==='sell').forEach(r=>{
+    if(map[r.code]) map[r.code].totalQty -= r.qty;
+  });
+  return Object.values(map).filter(h=>h.totalQty>0).map(h=>({
+    ...h, avgPrice: h.totalAmt/h.totalQty
+  }));
+}
+
+function getSold(){
+  const map = {};
+  records.filter(r=>r.type==='sell').forEach(r=>{
+    if(!map[r.code]) map[r.code]={code:r.code,name:r.name,profit:0};
+    map[r.code].profit += (r.profit||0);
+  });
+  return Object.values(map);
+}
+
+async function renderAll(){
+  const holdings = getHoldings();
+  await Promise.all(holdings.map(async h=>{ h.currentPrice = await fetchPrice(h.code); }));
+  renderSummary(holdings);
+  renderHoldings(holdings);
+  renderSold();
+  renderTable();
+  renderProfitChart(holdings);
+  renderRealizedChart();
+}
+
+function renderSummary(holdings){
+  const valid = holdings.filter(h=>h.currentPrice);
+  const totalBuy = holdings.reduce((a,h)=>a+h.totalAmt,0);
+  const totalEval = valid.reduce((a,h)=>a+h.currentPrice*h.totalQty,0);
+  const totalBuyV = valid.reduce((a,h)=>a+h.avgPrice*h.totalQty,0);
+  const profit = totalEval-totalBuyV;
+  const rate = totalBuyV>0?profit/totalBuyV*100:0;
+  const cls = rate>0?'pos':rate<0?'neg':'neu';
+  const sign = rate>0?'+':'';
+  document.getElementById('totalBuy').textContent = fmt(totalBuy)+'원';
+  document.getElementById('totalEval').textContent = valid.length?fmt(totalEval)+'원':'-';
+  const pe=document.getElementById('totalProfit');
+  pe.textContent=valid.length?sign+fmt(profit)+'원':'-'; pe.className='mv '+cls;
+  const re=document.getElementById('totalRate');
+  re.textContent=valid.length?sign+rate.toFixed(2)+'%':'-'; re.className='mv '+cls;
+}
+
+function renderHoldings(holdings){
+  const el=document.getElementById('holdingList');
+  if(!holdings.length){el.innerHTML='<div class="empty">보유 종목이 없어요</div>';return;}
+  el.innerHTML=holdings.map(h=>{
+    const ev=h.currentPrice?h.currentPrice*h.totalQty:null;
+    const profit=ev?ev-h.avgPrice*h.totalQty:null;
+    const rate=profit!==null?profit/(h.avgPrice*h.totalQty)*100:null;
+    const cls=rate===null?'neu':rate>0?'pos':rate<0?'neg':'neu';
+    const sign=rate!==null&&rate>0?'+':'';
+    return `<div class="stock-row">
+      <div><div class="sname">${h.name}</div><div class="scode">${h.code} · ${h.totalQty}주 · 평균 ${fmt(h.avgPrice)}원</div></div>
+      <div style="text-align:right">
+        <div class="rate ${cls}">${rate!==null?sign+rate.toFixed(2)+'%':'조회중...'}</div>
+        <div class="detail">${profit!==null?sign+fmt(profit)+'원 / '+fmt(h.currentPrice)+'원':''}</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function renderSold(){
+  const sold=getSold();
+  const el=document.getElementById('realizedList');
+  if(!sold.length){el.innerHTML='<div class="empty">매도 기록이 없어요</div>';return;}
+  el.innerHTML=sold.map(s=>{
+    const cls=s.profit>0?'pos':s.profit<0?'neg':'neu';
+    const sign=s.profit>0?'+':'';
+    return `<div class="stock-row">
+      <div><div class="sname">${s.name}</div><div class="scode">${s.code}</div></div>
+      <div class="rate ${cls}">${sign}${fmt(s.profit)}원</div>
+    </div>`;
+  }).join('');
+}
+
+function renderTable(){
+  const tbody=document.getElementById('recordTable');
+  if(!records.length){tbody.innerHTML='<tr><td colspan="8" class="empty">기록이 없어요</td></tr>';return;}
+  const sorted=[...records].sort((a,b)=>new Date(b.date)-new Date(a.date));
+  tbody.innerHTML=sorted.map(r=>{
+    const profit=r.type==='sell'&&r.profit!==null
+      ?`<span class="${r.profit>=0?'pos':'neg'}">${r.profit>=0?'+':''}${fmt(r.profit)}원</span>`
+      :'-';
+    return `<tr>
+      <td><span class="badge ${r.type==='buy'?'badge-buy':'badge-sell'}">${r.type==='buy'?'매수':'매도'}</span></td>
+      <td><b>${r.name}</b><br><span style="font-size:11px;color:#aaa">${r.code}</span></td>
+      <td>${r.date}</td>
+      <td>${fmt(r.price)}원</td>
+      <td>${r.qty}주</td>
+      <td>${fmt(r.amount)}원</td>
+      <td>${profit}</td>
+      <td><button class="btn-red" onclick="deleteRecord(${r.id})">삭제</button></td>
+    </tr>`;
+  }).join('');
+}
+
+function renderProfitChart(holdings){
+  const valid=holdings.filter(h=>h.currentPrice);
+  if(charts.profit){charts.profit.destroy(); charts.profit=null;}
+  if(!valid.length) return;
+  charts.profit=new Chart(document.getElementById('profitChart'),{
+    type:'bar',
+    data:{labels:valid.map(h=>h.name),datasets:[{
+      label:'수익률(%)',
+      data:valid.map(h=>parseFloat(((h.currentPrice-h.avgPrice)/h.avgPrice*100).toFixed(2))),
+      backgroundColor:valid.map(h=>h.currentPrice>=h.avgPrice?'#e24b4a':'#2563eb'),
+      borderRadius:6
+    }]},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>(c.raw>=0?'+':'')+c.raw+'%'}}},
+      scales:{x:{grid:{display:false},ticks:{font:{size:12}}},y:{grid:{color:'rgba(0,0,0,0.05)'},ticks:{font:{size:11},callback:v=>v+'%'}}}}
+  });
+}
+
+function renderRealizedChart(){
+  const sold=getSold();
+  if(charts.realized){charts.realized.destroy(); charts.realized=null;}
+  if(!sold.length) return;
+  charts.realized=new Chart(document.getElementById('realizedChart'),{
+    type:'bar',
+    data:{labels:sold.map(s=>s.name),datasets:[{
+      label:'실현손익(원)',
+      data:sold.map(s=>s.profit),
+      backgroundColor:sold.map(s=>s.profit>=0?'#e24b4a':'#2563eb'),
+      borderRadius:6
+    }]},
+    options:{responsive:true,maintainAspectRatio:false,
+      plugins:{legend:{display:false},tooltip:{callbacks:{label:c=>(c.raw>=0?'+':'')+fmt(c.raw)+'원'}}},
+      scales:{x:{grid:{display:false},ticks:{font:{size:12}}},y:{grid:{color:'rgba(0,0,0,0.05)'},ticks:{font:{size:11},callback:v=>fmt(v)+'원'}}}}
+  });
+}
+
+document.getElementById('tradeDate').value = new Date().toISOString().split('T')[0];
+renderAll();
+</script>
+</body>
+</html>
