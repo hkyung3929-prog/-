@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>ONE PEICE - KR 한국주식</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: #f5f5f3;
+    color: #1a1a1a;
+    min-height: 100vh;
+    padding: 24px 16px;
+  }
+  h1 {
+    font-size: 22px;
+    font-weight: 600;
+    margin-bottom: 4px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .subtitle { font-size: 13px; color: #888; margin-bottom: 24px; }
+  .card {
+    background: #fff;
+    border-radius: 12px;
+    border: 0.5px solid #e0e0e0;
+    padding: 20px;
+    margin-bottom: 16px;
+  }
+  .section-title {
+    font-size: 12px;
+    font-weight: 500;
+    color: #888;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    margin-bottom: 14px;
+  }
+  label { font-size: 12px; color: #666; display: block; margin-bottom: 4px; }
+  input {
+    width: 100%;
+    height: 38px;
+    border: 0.5px solid #ddd;
+    border-radius: 8px;
+    padding: 0 12px;
+    font-size: 14px;
+    color: #1a1a1a;
+    background: #fafafa;
+    outline: none;
+    margin-bottom: 10px;
+  }
+  input:focus { border-color: #aaa; background: #fff; }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .add-btn {
+    width: 100%;
+    height: 42px;
+    background: #1a1a1a;
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    margin-top: 4px;
+  }
+  .add-btn:hover { background: #333; }
+  .summary-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px; }
+  .metric {
+    background: #f5f5f3;
+    border-radius: 8px;
+    padding: 12px;
+  }
+  .metric .mlabel { font-size: 11px; color: #888; margin-bottom: 4px; }
+  .metric .mval { font-size: 18px; font-weight: 600; }
+  .pos { color: #e24b4a; }
+  .neg { color: #2563eb; }
+  .neu { color: #1a1a1a; }
+  .stock-item {
+    background: #fff;
+    border: 0.5px solid #e0e0e0;
+    border-radius: 10px;
+    padding: 16px;
+    margin-bottom: 10px;
+  }
+  .stock-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px; }
+  .stock-name { font-size: 15px; font-weight: 600; }
+  .stock-code { font-size: 12px; color: #888; margin-top: 2px; }
+  .del-btn { background: none; border: none; cursor: pointer; color: #ccc; font-size: 18px; line-height: 1; }
+  .del-btn:hover { color: #e24b4a; }
+  .sgrid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .smetric { background: #f9f9f8; border-radius: 8px; padding: 10px 12px; }
+  .smetric .sl { font-size: 11px; color: #888; margin-bottom: 3px; }
+  .smetric .sv { font-size: 14px; font-weight: 600; }
+  .smetric .ss { font-size: 11px; color: #aaa; margin-top: 2px; }
+  .chart-wrap { position: relative; width: 100%; height: 220px; margin-top: 4px; }
+  .empty { text-align: center; color: #aaa; font-size: 13px; padding: 32px 0; }
+  .loading { opacity: 0.5; font-style: italic; }
+  .legend { display: flex; gap: 16px; margin-bottom: 10px; font-size: 12px; color: #666; }
+  .legend span { display: flex; align-items: center; gap: 5px; }
+  .dot { width: 10px; height: 10px; border-radius: 2px; }
+</style>
+</head>
+<body>
+
+<h1>🍀 ONE PEICE</h1>
+<p class="subtitle">🇰🇷 KR 한국주식 매매일지</p>
+
+<div class="card">
+  <div class="section-title">종목 추가</div>
+  <label>종목코드 (6자리)</label>
+  <input type="text" id="code" placeholder="예: 005930" maxlength="6" />
+  <label>종목명</label>
+  <input type="text" id="name" placeholder="예: 삼성전자" />
+  <div class="grid2">
+    <div>
+      <label>매수가 (원)</label>
+      <input type="number" id="buyPrice" placeholder="72000" />
+    </div>
+    <div>
+      <label>수량 (주)</label>
+      <input type="number" id="qty" placeholder="10" />
+    </div>
+  </div>
+  <button class="add-btn" onclick="addStock()">+ 종목 추가</button>
+</div>
+
+<div class="card" id="summaryCard" style="display:none;">
+  <div class="section-title">포트폴리오 요약</div>
+  <div class="summary-grid">
+    <div class="metric">
+      <div class="mlabel">총 매수금액</div>
+      <div class="mval neu" id="totalBuy">-</div>
+    </div>
+    <div class="metric">
+      <div class="mlabel">총 평가금액</div>
+      <div class="mval neu" id="totalEval">-</div>
+    </div>
+    <div class="metric">
+      <div class="mlabel">총 수익금</div>
+      <div class="mval" id="totalProfit">-</div>
+    </div>
+    <div class="metric">
+      <div class="mlabel">평균 수익률</div>
+      <div class="mval" id="totalRate">-</div>
+    </div>
+  </div>
+  <div class="legend">
+    <span><span class="dot" style="background:#e24b4a;"></span>수익</span>
+    <span><span class="dot" style="background:#2563eb;"></span>손실</span>
+  </div>
+  <div class="chart-wrap">
+    <canvas id="profitChart" role="img" aria-label="종목별 수익률 막대 차트">종목별 수익률을 나타내는 차트입니다.</canvas>
+  </div>
+</div>
+
+<div class="card">
+  <div class="section-title">보유 종목</div>
+  <div id="stockList"><div class="empty">아직 추가된 종목이 없어요</div></div>
+</div>
+
+<script>
+let stocks = [];
+let chart = null;
+
+function fmt(n) { return Math.round(n).toLocaleString('ko-KR'); }
+
+async function fetchPrice(code) {
+  const url = `https://query1.finance.yahoo.com/v8/finance/chart/${code}.KS?interval=1d&range=1d`;
+  try {
+    const r = await fetch(url);
+    const d = await r.json();
+    const price = d?.chart?.result?.[0]?.meta?.regularMarketPrice;
+    return price ? Math.round(price) : null;
+  } catch { return null; }
+}
+
+async function addStock() {
+  const code = document.getElementById('code').value.trim();
+  const name = document.getElementById('name').value.trim();
+  const buyPrice = parseFloat(document.getElementById('buyPrice').value);
+  const qty = parseInt(document.getElementById('qty').value);
+
+  if (!code || !name || !buyPrice || !qty) { alert('모든 항목을 입력해주세요!'); return; }
+  if (code.length !== 6) { alert('종목코드는 6자리여야 해요 (예: 005930)'); return; }
+
+  const id = Date.now();
+  stocks.push({ id, code, name, buyPrice, qty, currentPrice: null, loading: true });
+  renderAll();
+
+  const price = await fetchPrice(code);
+  const s = stocks.find(x => x.id === id);
+  if (s) { s.currentPrice = price; s.loading = false; }
+  renderAll();
+
+  ['code','name','buyPrice','qty'].forEach(id => document.getElementById(id).value = '');
+}
+
+function removeStock(id) {
+  stocks = stocks.filter(x => x.id !== id);
+  renderAll();
+}
+
+function renderAll() {
+  renderList();
+  renderSummary();
+  renderChart();
+}
+
+function renderList() {
+  const el = document.getElementById('stockList');
+  if (stocks.length === 0) { el.innerHTML = '<div class="empty">아직 추가된 종목이 없어요</div>'; return; }
+  el.innerHTML = stocks.map(s => {
+    const buyAmt = s.buyPrice * s.qty;
+    const evalAmt = s.currentPrice ? s.currentPrice * s.qty : null;
+    const profit = evalAmt !== null ? evalAmt - buyAmt : null;
+    const rate = profit !== null ? (profit / buyAmt * 100) : null;
+    const cls = rate === null ? 'neu' : rate > 0 ? 'pos' : rate < 0 ? 'neg' : 'neu';
+    const sign = rate !== null && rate > 0 ? '+' : '';
+    return `<div class="stock-item">
+      <div class="stock-header">
+        <div><div class="stock-name">${s.name}</div><div class="stock-code">${s.code}.KS</div></div>
+        <button class="del-btn" onclick="removeStock(${s.id})">×</button>
+      </div>
+      <div class="sgrid">
+        <div class="smetric"><div class="sl">매수가</div><div class="sv">${fmt(s.buyPrice)}원</div></div>
+        <div class="smetric"><div class="sl">현재가</div><div class="sv ${cls}">${s.loading ? '<span class="loading">조회중...</span>' : s.currentPrice ? fmt(s.currentPrice)+'원' : '조회실패'}</div></div>
+        <div class="smetric"><div class="sl">매수금액</div><div class="sv">${fmt(buyAmt)}원</div></div>
+        <div class="smetric">
+          <div class="sl">수익률</div>
+          <div class="sv ${cls}">${rate !== null ? sign+rate.toFixed(2)+'%' : '-'}</div>
+          ${profit !== null ? `<div class="ss">${sign}${fmt(profit)}원</div>` : ''}
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function renderSummary() {
+  const sec = document.getElementById('summaryCard');
+  if (stocks.length === 0) { sec.style.display = 'none'; return; }
+  sec.style.display = 'block';
+  const valid = stocks.filter(s => s.currentPrice && !s.loading);
+  const totalBuy = stocks.reduce((a, s) => a + s.buyPrice * s.qty, 0);
+  const totalEval = valid.reduce((a, s) => a + s.currentPrice * s.qty, 0);
+  const totalBuyValid = valid.reduce((a, s) => a + s.buyPrice * s.qty, 0);
+  const totalProfit = totalEval - totalBuyValid;
+  const totalRate = totalBuyValid > 0 ? (totalProfit / totalBuyValid * 100) : 0;
+  const cls = totalRate > 0 ? 'pos' : totalRate < 0 ? 'neg' : 'neu';
+  const sign = totalRate > 0 ? '+' : '';
+  document.getElementById('totalBuy').textContent = fmt(totalBuy) + '원';
+  document.getElementById('totalEval').textContent = valid.length ? fmt(totalEval) + '원' : '-';
+  const pe = document.getElementById('totalProfit');
+  pe.textContent = valid.length ? sign + fmt(totalProfit) + '원' : '-';
+  pe.className = 'mval ' + cls;
+  const re = document.getElementById('totalRate');
+  re.textContent = valid.length ? sign + totalRate.toFixed(2) + '%' : '-';
+  re.className = 'mval ' + cls;
+}
+
+function renderChart() {
+  const valid = stocks.filter(s => s.currentPrice && !s.loading);
+  if (valid.length === 0) { if (chart) { chart.destroy(); chart = null; } return; }
+  const labels = valid.map(s => s.name);
+  const rates = valid.map(s => parseFloat(((s.currentPrice - s.buyPrice) / s.buyPrice * 100).toFixed(2)));
+  const colors = rates.map(r => r >= 0 ? '#e24b4a' : '#2563eb');
+  if (chart) chart.destroy();
+  chart = new Chart(document.getElementById('profitChart'), {
+    type: 'bar',
+    data: { labels, datasets: [{ label: '수익률(%)', data: rates, backgroundColor: colors, borderRadius: 6 }] },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: { callbacks: { label: ctx => (ctx.raw >= 0 ? '+' : '') + ctx.raw + '%' } }
+      },
+      scales: {
+        x: { grid: { display: false }, ticks: { font: { size: 12 } } },
+        y: { grid: { color: 'rgba(0,0,0,0.05)' }, ticks: { font: { size: 11 }, callback: v => v + '%' } }
+      }
+    }
+  });
+}
+</script>
+</body>
+</html>
